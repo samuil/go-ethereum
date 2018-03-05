@@ -27,8 +27,6 @@ import (
 // TestCLISwarmUp tests that running 'swarm up' makes the resulting file
 // available from all nodes via the HTTP API
 func TestCLISwarmUp(t *testing.T) {
-	// temporarily disable to make travis green
-	t.Skip()
 	// start 3 node cluster
 	t.Log("starting 3 node cluster")
 	cluster := newTestCluster(t, 3)
@@ -56,6 +54,25 @@ func TestCLISwarmUp(t *testing.T) {
 		res, err := http.Get(node.URL + "/bzz:/" + hash)
 		assertNil(t, err)
 		assertHTTPResponse(t, res, http.StatusOK, "data")
+	}
+}
+
+// TestCLISwarmNotFound tests that trying to fetch an unknown bzz hash
+// via the HTTP API results in 404 status code
+func TestCLISwarmNotFound(t *testing.T) {
+	// start 3 node cluster
+	t.Log("starting 3 node cluster")
+	cluster := newTestCluster(t, 3)
+	defer cluster.Shutdown()
+
+	// get the file from the HTTP API of each node
+	for _, node := range cluster.Nodes {
+		t.Logf("getting file from %s", node.Name)
+		res, err := http.Get(node.URL + "/bzz:/1023e8bae0f70be7d7b5f74343088ba408a218254391490c85ae16278e230340")
+		assertNil(t, err)
+		if res.StatusCode != 404 {
+			t.Fatalf("expected HTTP status 404, got %s", res.Status)
+		}
 	}
 }
 
