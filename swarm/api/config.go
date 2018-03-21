@@ -42,7 +42,7 @@ const (
 // allow several bzz nodes running in parallel
 type Config struct {
 	// serialised/persisted fields
-	*storage.StoreParams
+	*storage.LocalStoreParams
 	*storage.ChunkerParams
 	*network.HiveParams
 	Swap *swap.SwapParams
@@ -72,9 +72,9 @@ type Config struct {
 func NewConfig() (self *Config) {
 
 	self = &Config{
-		StoreParams:   storage.NewDefaultStoreParams(),
-		ChunkerParams: storage.NewChunkerParams(),
-		HiveParams:    network.NewHiveParams(),
+		LocalStoreParams: storage.NewDefaultLocalStoreParams(),
+		ChunkerParams:    storage.NewChunkerParams(),
+		HiveParams:       network.NewHiveParams(),
 		//SyncParams:    network.NewDefaultSyncParams(),
 		Swap:            swap.NewDefaultSwapParams(),
 		ListenAddr:      DefaultHTTPListenAddr,
@@ -117,8 +117,16 @@ func (self *Config) Init(prvKey *ecdsa.PrivateKey) {
 	if self.SwapEnabled {
 		self.Swap.Init(self.Contract, prvKey)
 	}
+
 	self.privateKey = prvKey
-	self.StoreParams.Init(self.Path)
+	self.LocalStoreParams.BaseKey = common.Hex2Bytes(self.BzzKey)
+	log.Warn("hash", "hash", self.ChunkerParams, "local", self.LocalStoreParams.StoreParams)
+	if self.LocalStoreParams.StoreParams.StoreParamsHidden == nil {
+		self.LocalStoreParams.StoreParams.StoreParamsHidden = &storage.StoreParamsHidden{}
+	}
+	self.LocalStoreParams.Hash = storage.MakeHashFunc(self.ChunkerParams.Hash)
+	self.LocalStoreParams.Validator = storage.ValidateChunk
+	self.LocalStoreParams.Init(self.Path)
 }
 
 func (self *Config) ShiftPrivateKey() (privKey *ecdsa.PrivateKey) {

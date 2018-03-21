@@ -156,7 +156,7 @@ func TestConfigFileOverrides(t *testing.T) {
 	defaultConf.PssEnabled = true
 	defaultConf.NetworkId = 54
 	defaultConf.Port = httpPort
-	defaultConf.StoreParams.DbCapacity = 9000000
+	defaultConf.DbCapacity = 9000000
 	defaultConf.ChunkerParams.Branches = 64
 	defaultConf.HiveParams.KeepAliveInterval = 6000000000
 	defaultConf.Swap.Params.Strategy.AutoCashInterval = 600 * time.Second
@@ -233,7 +233,7 @@ func TestConfigFileOverrides(t *testing.T) {
 		t.Fatal("Expected Pss to be enabled, but is false")
 	}
 
-	if info.StoreParams.DbCapacity != 9000000 {
+	if info.DbCapacity != 9000000 {
 		t.Fatalf("Expected network ID to be %d, got %d", 54, info.NetworkId)
 	}
 
@@ -373,7 +373,7 @@ func TestConfigCmdLineOverridesFile(t *testing.T) {
 	defaultConf.PssEnabled = false
 	defaultConf.NetworkId = 54
 	defaultConf.Port = "8588"
-	defaultConf.StoreParams.DbCapacity = 9000000
+	defaultConf.DbCapacity = 9000000
 	defaultConf.ChunkerParams.Branches = 64
 	defaultConf.HiveParams.KeepAliveInterval = 6000000000
 	defaultConf.Swap.Params.Strategy.AutoCashInterval = 600 * time.Second
@@ -384,10 +384,12 @@ func TestConfigCmdLineOverridesFile(t *testing.T) {
 		t.Fatalf("Error creating TOML file in TestFileOverride: %v", err)
 	}
 	//write file
-	f, err := ioutil.TempFile("", "testconfig.toml")
+	fname := "testconfig.toml"
+	f, err := ioutil.TempFile("", fname)
 	if err != nil {
 		t.Fatalf("Error writing TOML file in TestFileOverride: %v", err)
 	}
+	//defer os.Remove(fname)
 	//write file
 	_, err = f.WriteString(string(out))
 	if err != nil {
@@ -452,8 +454,8 @@ func TestConfigCmdLineOverridesFile(t *testing.T) {
 		t.Fatal("Expected Sync to be enabled, but is false")
 	}
 
-	if info.StoreParams.DbCapacity != 9000000 {
-		t.Fatalf("Expected network ID to be %d, got %d", 54, info.NetworkId)
+	if info.LocalStoreParams.DbCapacity != 9000000 {
+		t.Fatalf("Expected Capacity to be %d, got %d", 9000000, info.LocalStoreParams.DbCapacity)
 	}
 
 	if info.ChunkerParams.Branches != 64 {

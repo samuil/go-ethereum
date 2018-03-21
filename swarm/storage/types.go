@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/bmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto/sha3"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 const MaxPO = 7
@@ -246,10 +247,16 @@ type ChunkStore interface {
 }
 
 type StoreParams struct {
-	Capacity  uint64
+	*StoreParamsHidden `toml:"-"`
+	DbCapacity         uint64
+	CacheCapacity      uint
+	BaseKey            []byte
+}
+
+// toml marshalling fails on func type members
+type StoreParamsHidden struct {
 	Hash      SwarmHasher
-	Validator func(*Key, []byte) bool
-	BaseKey   []byte
+	Validator func(SwarmHash, *Key, []byte) bool `json:"-"`
 }
 
 func NewStoreParams(capacity uint64, hash SwarmHasher, basekey []byte) *StoreParams {
@@ -259,10 +266,17 @@ func NewStoreParams(capacity uint64, hash SwarmHasher, basekey []byte) *StorePar
 	if hash == nil {
 		hash = MakeHashFunc("SHA3")
 	}
+	if capacity == 0 {
+		capacity = defaultDbCapacity
+	}
 	return &StoreParams{
-		Capacity: capacity,
-		Hash:     hash,
-		BaseKey:  basekey,
+		StoreParamsHidden: &StoreParamsHidden{
+			Hash:      hash,
+			Validator: NoValidateChunk,
+		},
+		DbCapacity:    capacity,
+		CacheCapacity: defaultCacheCapacity,
+		BaseKey:       basekey,
 	}
 }
 
@@ -333,4 +347,19 @@ type LazyTestSectionReader struct {
 
 func (self *LazyTestSectionReader) Size(chan bool) (int64, error) {
 	return self.SectionReader.Size(), nil
+}
+
+func NoValidateChunk(hasher SwarmHash, key *Key, data []byte) bool {
+	return true
+}
+
+func ValidateChunk(hasher SwarmHash, key *Key, data []byte) bool {
+	hasher.Reset()
+	hasher.Write(data)
+	hash := hasher.Sum(nil)
+	if !bytes.Equal(hash, (*key)[:]) {
+		log.Error(fmt.Sprintf("Apparent key/hash mismatch. Hash %x, data %v, key %v", hash, data[:16], (*key)[:]))
+		return false
+	}
+	return true
 }
