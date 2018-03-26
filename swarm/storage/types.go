@@ -241,7 +241,29 @@ The ChunkStore interface is implemented by :
 type ChunkStore interface {
 	Put(*Chunk) // effectively there is no error even if there is an error
 	Get(Key) (*Chunk, error)
+	Validate(*Key, []byte) bool
 	Close()
+}
+
+type StoreParams struct {
+	Capacity  uint64
+	Hash      SwarmHasher
+	Validator func(*Key, []byte) bool
+	BaseKey   []byte
+}
+
+func NewStoreParams(capacity uint64, hash SwarmHasher, basekey []byte) *StoreParams {
+	if basekey == nil {
+		basekey = make([]byte, 32)
+	}
+	if hash == nil {
+		hash = MakeHashFunc("SHA3")
+	}
+	return &StoreParams{
+		Capacity: capacity,
+		Hash:     hash,
+		BaseKey:  basekey,
+	}
 }
 
 /*

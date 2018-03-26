@@ -69,15 +69,15 @@ type DPA struct {
 // for testing locally
 func NewLocalDPA(datadir string, basekey []byte) (*DPA, error) {
 
-	hash := MakeHashFunc("SHA3")
+	params := NewLDBStoreParams(datadir, 0, nil, nil)
 
-	dbStore, err := NewLDBStore(datadir, hash, singletonSwarmDbCapacity, func(k Key) (ret uint8) { return uint8(Proximity(basekey[:], k[:])) })
+	dbStore, err := NewLDBStore(params)
 	if err != nil {
 		return nil, err
 	}
 
 	return NewDPA(&LocalStore{
-		memStore: NewMemStore(dbStore, singletonSwarmCacheCapacity),
+		memStore: NewMemStore(params.StoreParams, dbStore),
 		DbStore:  dbStore,
 	}, NewChunkerParams()), nil
 }

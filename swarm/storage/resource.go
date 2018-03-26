@@ -808,6 +808,10 @@ func (r *resourceChunkStore) Close() {
 	r.localStore.Close()
 }
 
+func (r *resourceChunkStore) Validate(key *Key, data []byte) bool {
+	return true
+}
+
 func getNextPeriod(start uint64, current uint64, frequency uint64) uint32 {
 	blockdiff := current - start
 	period := blockdiff / frequency
@@ -868,14 +872,14 @@ func isMultihash(data []byte) int {
 // TODO: this should not be exposed, but swarm/testutil/http.go needs it
 func NewTestResourceHandler(datadir string, ethClient headerGetter, validator ResourceValidator) (*ResourceHandler, error) {
 	path := filepath.Join(datadir, DbDirName)
-	basekey := make([]byte, 32)
 	hasher := MakeHashFunc(SHA3Hash)
-	dbStore, err := NewLDBStore(path, hasher, singletonSwarmDbCapacity, func(k Key) (ret uint8) { return uint8(Proximity(basekey[:], k[:])) })
+	params := NewLDBStoreParams(path, 0, nil, nil)
+	dbStore, err := NewLDBStore(params)
 	if err != nil {
 		return nil, err
 	}
 	localStore := &LocalStore{
-		memStore: NewMemStore(dbStore, singletonSwarmDbCapacity),
+		memStore: NewMemStore(NewStoreParams(defaultDbCapacity, nil, nil), dbStore),
 		DbStore:  dbStore,
 	}
 	resourceChunkStore := NewResourceChunkStore(localStore, nil)
